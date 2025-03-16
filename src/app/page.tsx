@@ -15,6 +15,11 @@ export default function Home() {
   const [currentCommand, setCurrentCommand] = useState("");
   const [commandHistory, setCommandHistory] = useState<string[]>([]);
   const [activeContent, setActiveContent] = useState<string | undefined>();
+  const [isMobile, setIsMobile] = useState(false);
+
+  const [mobileView, setMobileView] = useState<"terminal" | "content">(
+    "terminal"
+  );
 
   const handleCommand = (cmd: string) => {
     const trimmedCmd = cmd.trim().toLowerCase();
@@ -29,6 +34,9 @@ export default function Home() {
 
     if (contentCommands.includes(trimmedCmd)) {
       setActiveContent(trimmedCmd);
+      if (isMobile) {
+        setMobileView("content");
+      }
     }
 
     const response =
@@ -85,18 +93,77 @@ export default function Home() {
     }, 0);
   };
 
+  // Check if the screen is mobile size
+  useEffect(() => {
+    const checkIfMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    checkIfMobile();
+    window.addEventListener("resize", checkIfMobile);
+
+    return () => {
+      window.removeEventListener("resize", checkIfMobile);
+    };
+  }, []);
+
   useEffect(() => {
     if (inputRef.current) {
       inputRef.current.focus();
     }
   }, []);
 
+  const shouldShowContent = isMobile
+    ? activeContent && mobileView === "content"
+    : activeContent;
+
   return (
-    <main className="bg-gray-800 py-16 h-screen">
-      <div className="container text-gray-300 font-mono h-full">
-        <div className="flex flex-row gap-24 h-full justify-center">
+    <main className="bg-gray-800 py-6 md:py-16 min-h-screen">
+      <div className="container mx-auto px-4 md:px-0 text-gray-300 font-mono h-full">
+        {/* Mobile view switcher - only show when there's content to display */}
+        {isMobile && activeContent && (
+          <div className="flex mb-4 border border-emerald-400/20 rounded-lg overflow-hidden">
+            <button
+              type="button"
+              onClick={() => setMobileView("terminal")}
+              className={cn(
+                "flex-1 py-2 text-center transition-colors",
+                mobileView === "terminal"
+                  ? "bg-gray-700 text-green-400"
+                  : "bg-gray-900 text-gray-400"
+              )}
+            >
+              Terminal
+            </button>
+            <button
+              type="button"
+              onClick={() => setMobileView("content")}
+              className={cn(
+                "flex-1 py-2 text-center transition-colors",
+                mobileView === "content"
+                  ? "bg-gray-700 text-green-400"
+                  : "bg-gray-900 text-gray-400"
+              )}
+            >
+              Content
+            </button>
+          </div>
+        )}
+
+        <div
+          className={cn(
+            "h-full",
+            isMobile ? "flex flex-col" : "flex flex-row gap-24 justify-center"
+          )}
+        >
           {/* Terminal Side */}
-          <div className={cn("flex flex-col w-1/2 h-[calc(66.6667%+50px)]")}>
+          <div
+            className={cn(
+              "flex flex-col",
+              isMobile
+                ? cn("w-full", mobileView === "content" ? "hidden" : "block")
+                : "w-1/2 h-[calc(66.6667%+50px)]"
+            )}
+          >
             <div className="bg-[#8FE3CF] rounded-t-lg p-2 flex items-center">
               <div className="flex space-x-2">
                 <div className="w-3 h-3 rounded-full bg-red-500" />
@@ -108,7 +175,12 @@ export default function Home() {
                 portfolio.terminal
               </div>
             </div>
-            <div className="bg-gray-900 p-4 rounded-b-lg flex-1 overflow-auto shadow-2xl border border-emerald-400/20 custom-scrollbar">
+            <div
+              className={cn(
+                "bg-gray-900 p-4 rounded-b-lg overflow-auto shadow-2xl border border-emerald-400/20 custom-scrollbar",
+                isMobile ? "h-72" : "flex-1"
+              )}
+            >
               <div className="mb-4">
                 <p className="text-yellow-400">
                   Welcome to my portfolio terminal!
@@ -136,7 +208,7 @@ export default function Home() {
               </div>
             </div>
 
-            <div className="mt-4">
+            <div className="mt-4 mb-6">
               <button
                 type="button"
                 onClick={() => {
@@ -144,7 +216,10 @@ export default function Home() {
                     "https://docs.google.com/document/d/1yw4IqX84IjhRyYVDw85nxZ7EAlLRN-dU/export?format=docx";
                   return window.open(fileUrl, "_blank");
                 }}
-                className="bg-gray-900 hover:bg-gray-700 text-green-400 hover:text-green-300 font-mono px-4 py-2 border border-emerald-400/20 hover:border-green-400 rounded transition-all duration-200 shadow-md flex items-center space-x-2"
+                className={cn(
+                  "bg-gray-900 hover:bg-gray-700 text-green-400 hover:text-green-300 font-mono px-4 py-2 border border-emerald-400/20 hover:border-green-400 rounded transition-all duration-200 shadow-md flex items-center space-x-2",
+                  isMobile && "w-full justify-center"
+                )}
               >
                 <svg
                   className="w-5 h-5"
@@ -172,15 +247,17 @@ export default function Home() {
             </div>
           </div>
 
-          {/* Content Side */}
-          <div
-            className={cn(
-              "relative bg-gray-900 rounded-lg p-6 w-1/2 h-full shadow-2xl border border-emerald-400/20 overflow-auto custom-scrollbar",
-              activeContent ? "block" : "hidden"
-            )}
-          >
-            <ContentView />
-          </div>
+          {/* Content Side - Only render if it should be shown */}
+          {shouldShowContent && (
+            <div
+              className={cn(
+                "bg-gray-900 rounded-lg shadow-2xl border border-emerald-400/20 overflow-auto custom-scrollbar",
+                isMobile ? "w-full p-4" : "relative p-6 w-1/2 h-full"
+              )}
+            >
+              <ContentView />
+            </div>
+          )}
         </div>
       </div>
     </main>
