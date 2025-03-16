@@ -117,7 +117,7 @@ export default function Home() {
     : activeContent;
 
   return (
-    <main className="bg-gray-800 py-6 md:py-16 min-h-screen">
+    <main className="bg-gray-800 py-6 md:py-16 h-screen">
       <div className="container mx-auto px-4 md:px-0 text-gray-300 font-mono h-full">
         {/* Mobile view switcher - only show when there's content to display */}
         {isMobile && activeContent && (
@@ -178,7 +178,7 @@ export default function Home() {
             <div
               className={cn(
                 "bg-gray-900 p-4 rounded-b-lg overflow-auto shadow-2xl border border-emerald-400/20 custom-scrollbar",
-                isMobile ? "h-72" : "flex-1"
+                isMobile ? "h-72" : "flex-1 h-"
               )}
             >
               <div className="mb-4">
