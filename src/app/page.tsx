@@ -239,9 +239,9 @@ export default function Home() {
                   transition={{ delay: 0.4 }}
                   className="mb-2"
                 >
-                  Hallo, I'm <strong>Khoerul Umam</strong>, a{" "}
+                  Hallo, I&apos;m <strong>Khoerul Umam</strong>, a{" "}
                   <strong>Frontend & Odoo Developer.</strong>
-                  I'm passionate about building responsive web apps with{" "}
+                  I&apos;m passionate about building responsive web apps with{" "}
                   <i>React.js, Next.js, and Tailwind CSS.</i> I have over 4
                   years of experience in Frontend development and over 3 years
                   of experience in Odoo development, optimizing ERP solutions
