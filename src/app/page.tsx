@@ -1,21 +1,49 @@
 "use client";
 
 import type React from "react";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, memo } from "react";
 import { Terminal } from "lucide-react";
 import { cn } from "@/utils/helpers";
 import { AboutMe } from "@/components/about";
 import { ContactMe } from "@/components/contact";
 import { MyProject } from "@/components/projects";
 import { MySkills } from "@/components/skills";
+import { motion, AnimatePresence } from "motion/react";
+
+const ContentViewComponent = memo(
+  ({ content }: { content: string | undefined }) => {
+    switch (content) {
+      case "about":
+        return <AboutMe />;
+      case "skills":
+        return <MySkills />;
+      case "projects":
+        return <MyProject />;
+      case "contact":
+        return <ContactMe />;
+      default:
+        return (
+          <p className="text-gray-300">
+            &quot;AI won&apos;t replace humans, but humans using AI will.&quot;
+            - Fei-Fei Li
+          </p>
+        );
+    }
+  }
+);
+
+// Display name for debugging
+ContentViewComponent.displayName = "ContentViewComponent";
 
 export default function Home() {
   const inputRef = useRef<HTMLInputElement>(null);
+  const endOfTerminalRef = useRef<HTMLDivElement>(null);
 
   const [currentCommand, setCurrentCommand] = useState("");
   const [commandHistory, setCommandHistory] = useState<string[]>([]);
   const [activeContent, setActiveContent] = useState<string | undefined>();
   const [isMobile, setIsMobile] = useState(false);
+  const [contentChangeCounter, setContentChangeCounter] = useState(0);
 
   const [mobileView, setMobileView] = useState<"terminal" | "content">(
     "terminal"
@@ -26,6 +54,10 @@ export default function Home() {
 
     if (trimmedCmd === "clear") {
       setCommandHistory([]);
+      if (activeContent) {
+        setActiveContent(undefined);
+        setContentChangeCounter((prev) => prev + 1);
+      }
       return;
     }
 
@@ -33,9 +65,12 @@ export default function Home() {
     const allCommands = [...contentCommands, "help", "clear"];
 
     if (contentCommands.includes(trimmedCmd)) {
-      setActiveContent(trimmedCmd);
-      if (isMobile) {
-        setMobileView("content");
+      if (activeContent !== trimmedCmd) {
+        setActiveContent(trimmedCmd);
+        setContentChangeCounter((prev) => prev + 1);
+        if (isMobile) {
+          setMobileView("content");
+        }
       }
     }
 
@@ -57,33 +92,6 @@ export default function Home() {
     if (e.key === "Enter") {
       handleCommand(currentCommand);
       setCurrentCommand("");
-      if (currentCommand === "clear") {
-        setActiveContent(undefined);
-      }
-    }
-  };
-
-  const ContentView = () => {
-    switch (activeContent) {
-      case "about":
-        return <AboutMe />;
-
-      case "skills":
-        return <MySkills />;
-
-      case "projects":
-        return <MyProject />;
-
-      case "contact":
-        return <ContactMe />;
-
-      default:
-        return (
-          <p className="text-gray-300">
-            &quot;AI won&apos;t replace humans, but humans using AI will.&quot;
-            - Fei-Fei Li
-          </p>
-        );
     }
   };
 
@@ -112,42 +120,59 @@ export default function Home() {
     }
   }, []);
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: <explanation>
+  useEffect(() => {
+    endOfTerminalRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [commandHistory]);
+
   const shouldShowContent = isMobile
     ? activeContent && mobileView === "content"
     : activeContent;
 
   return (
-    <main className="bg-gray-800 py-6 md:py-16 h-screen">
+    <motion.main
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.5 }}
+      className="bg-gray-800 py-6 md:py-16 h-screen"
+    >
       <div className="container mx-auto px-4 md:px-0 text-gray-300 font-mono h-full">
         {/* Mobile view switcher - only show when there's content to display */}
-        {isMobile && activeContent && (
-          <div className="flex mb-4 border border-emerald-400/20 rounded-lg overflow-hidden">
-            <button
-              type="button"
-              onClick={() => setMobileView("terminal")}
-              className={cn(
-                "flex-1 py-2 text-center transition-colors",
-                mobileView === "terminal"
-                  ? "bg-gray-700 text-green-400"
-                  : "bg-gray-900 text-gray-400"
-              )}
+        <AnimatePresence>
+          {isMobile && activeContent && (
+            <motion.div
+              initial={{ opacity: 0, y: -20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              className="flex mb-4 border border-emerald-400/20 rounded-lg overflow-hidden"
             >
-              Terminal
-            </button>
-            <button
-              type="button"
-              onClick={() => setMobileView("content")}
-              className={cn(
-                "flex-1 py-2 text-center transition-colors",
-                mobileView === "content"
-                  ? "bg-gray-700 text-green-400"
-                  : "bg-gray-900 text-gray-400"
-              )}
-            >
-              Content
-            </button>
-          </div>
-        )}
+              <button
+                type="button"
+                onClick={() => setMobileView("terminal")}
+                className={cn(
+                  "flex-1 py-2 text-center transition-colors",
+                  mobileView === "terminal"
+                    ? "bg-gray-700 text-green-400"
+                    : "bg-gray-900 text-gray-400"
+                )}
+              >
+                Terminal
+              </button>
+              <button
+                type="button"
+                onClick={() => setMobileView("content")}
+                className={cn(
+                  "flex-1 py-2 text-center transition-colors",
+                  mobileView === "content"
+                    ? "bg-gray-700 text-green-400"
+                    : "bg-gray-900 text-gray-400"
+                )}
+              >
+                Content
+              </button>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         <div
           className={cn(
@@ -156,7 +181,8 @@ export default function Home() {
           )}
         >
           {/* Terminal Side */}
-          <div
+          <motion.div
+            layout
             className={cn(
               "flex flex-col",
               isMobile
@@ -164,35 +190,97 @@ export default function Home() {
                 : "w-1/2 h-[calc(66.6667%+50px)]"
             )}
           >
-            <div className="bg-[#8FE3CF] rounded-t-lg p-2 flex items-center">
+            <motion.div
+              initial={{ y: -20 }}
+              animate={{ y: 0 }}
+              transition={{ delay: 0.1 }}
+              className="bg-[#8FE3CF] rounded-t-lg p-2 flex items-center"
+            >
               <div className="flex space-x-2">
-                <div className="w-3 h-3 rounded-full bg-red-500" />
-                <div className="w-3 h-3 rounded-full bg-yellow-500" />
-                <div className="w-3 h-3 rounded-full bg-green-500" />
+                <motion.div
+                  whileHover={{ scale: 1.2 }}
+                  className="w-3 h-3 rounded-full bg-red-500"
+                />
+                <motion.div
+                  whileHover={{ scale: 1.2 }}
+                  className="w-3 h-3 rounded-full bg-yellow-500"
+                />
+                <motion.div
+                  whileHover={{ scale: 1.2 }}
+                  className="w-3 h-3 rounded-full bg-green-500"
+                />
               </div>
               <div className="flex-1 text-center text-sm text-[#2B4865]">
                 <Terminal className="inline-block mr-2" size={16} />
                 portfolio.terminal
               </div>
-            </div>
-            <div
+            </motion.div>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.2 }}
               className={cn(
                 "bg-gray-900 p-4 rounded-b-lg overflow-auto shadow-2xl border border-emerald-400/20 custom-scrollbar",
                 isMobile ? "h-72" : "flex-1 h-"
               )}
             >
               <div className="mb-4">
-                <p className="text-yellow-400">
+                <motion.p
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: 0.3 }}
+                  className="text-yellow-400"
+                >
                   Welcome to my portfolio terminal!
-                </p>
-                <p>Type &apos;help&apos; to see available commands.</p>
+                </motion.p>
+                <motion.p
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: 0.4 }}
+                  className="mb-2"
+                >
+                  Hallo, I'm <strong>Khoerul Umam</strong>, a{" "}
+                  <strong>Frontend & Odoo Developer.</strong>
+                  I'm passionate about building responsive web apps with{" "}
+                  <i>React.js, Next.js, and Tailwind CSS.</i> I have over 4
+                  years of experience in Frontend development and over 3 years
+                  of experience in Odoo development, optimizing ERP solutions
+                  for businesses.
+                </motion.p>
+                <motion.p
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: 0.5 }}
+                >
+                  Type &apos;help&apos; to see available commands.
+                </motion.p>
               </div>
 
-              {commandHistory.map((item, index) => (
-                <div key={index} className="mb-2">
-                  <p>{item}</p>
-                </div>
-              ))}
+              <AnimatePresence>
+                {commandHistory.map((item, index) => (
+                  <motion.div
+                    key={`cmd-${index}`}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.1 }}
+                    className="mb-2"
+                  >
+                    {item.startsWith("umam@portfolio:~$") ? (
+                      <p>
+                        <span className="text-[#82DBD8]">
+                          {item.split("$")[0]}$
+                        </span>
+                        <span className="text-green-400">
+                          {item.split("$")[1]}
+                        </span>
+                      </p>
+                    ) : (
+                      <p className="text-gray-400">{item}</p>
+                    )}
+                  </motion.div>
+                ))}
+              </AnimatePresence>
+              <div ref={endOfTerminalRef} />
 
               <div className="flex">
                 <span className="text-[#82DBD8]">umam@portfolio:~$&nbsp;</span>
@@ -206,10 +294,17 @@ export default function Home() {
                   className="flex-1 bg-transparent outline-none border-none text-green-400"
                 />
               </div>
-            </div>
+            </motion.div>
 
-            <div className="mt-4 mb-6">
-              <button
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.5 }}
+              className="mt-4 mb-6"
+            >
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
                 type="button"
                 onClick={() => {
                   const fileUrl =
@@ -243,23 +338,30 @@ export default function Home() {
                   />
                 </svg>
                 <span>Download CV</span>
-              </button>
-            </div>
-          </div>
+              </motion.button>
+            </motion.div>
+          </motion.div>
 
           {/* Content Side - Only render if it should be shown */}
-          {shouldShowContent && (
-            <div
-              className={cn(
-                "bg-gray-900 rounded-lg shadow-2xl border border-emerald-400/20 overflow-auto custom-scrollbar",
-                isMobile ? "w-full p-4" : "relative p-6 w-1/2 h-full"
-              )}
-            >
-              <ContentView />
-            </div>
-          )}
+          <AnimatePresence mode="wait">
+            {shouldShowContent && (
+              <motion.div
+                key={contentChangeCounter} // Use counter to control animation
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: 20 }}
+                transition={{ duration: 0.3 }}
+                className={cn(
+                  "bg-gray-900 rounded-lg shadow-2xl border border-emerald-400/20 overflow-auto custom-scrollbar",
+                  isMobile ? "w-full p-4" : "relative p-6 w-1/2 h-full"
+                )}
+              >
+                <ContentViewComponent content={activeContent} />
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
       </div>
-    </main>
+    </motion.main>
   );
 }
